@@ -1,0 +1,176 @@
+-- FLING ПО НИКУ (НЕСКОЛЬКО ИГРОКОВ)
+local p = game.Players.LocalPlayer
+local Players = game:GetService("Players")
+
+-- =============================================
+-- ФЛИНГ ТЕХНОЛОГИЯ КОВАСАКИ
+-- =============================================
+local function kawasakiFling(targetPlayer)
+    if not targetPlayer or not targetPlayer.Character then return end
+    local char = p.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    
+    local tRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not tRoot then return end
+    
+    for i = 1, 3 do
+        local dir = (tRoot.Position - root.Position).Unit
+        root.CFrame = CFrame.new(tRoot.Position) * CFrame.new(0, 5, 0) * CFrame.Angles(0, math.rad(i * 120), 0)
+        root.Velocity = dir * 9e7 + Vector3.new(0, 9e7, 0)
+        root.RotVelocity = Vector3.new(9e8, 9e8, 9e8)
+        task.wait(0.05)
+    end
+end
+
+-- =============================================
+-- ФУНКЦИЯ ПАРСИНГА НИКОВ
+-- =============================================
+local function parseNames(input)
+    local names = {}
+    for name in string.gmatch(input, "[^,]+") do
+        local trimmed = name:gsub("^%s*(.-)%s*$", "%1")
+        if trimmed ~= "" then
+            table.insert(names, trimmed)
+        end
+    end
+    return names
+end
+
+-- =============================================
+-- GUI
+-- =============================================
+local pg = p:WaitForChild("PlayerGui")
+local old = pg:FindFirstChild("FlingGUI")
+if old then old:Destroy() end
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "FlingGUI"
+gui.ResetOnSpawn = false
+gui.Parent = pg
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 280, 0, 140)
+mainFrame.Position = UDim2.new(0.5, -140, 0.5, -70)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.BorderSizePixel = 2
+mainFrame.BorderColor3 = Color3.fromRGB(0, 255, 200)
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = gui
+
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 12)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 25)
+title.Position = UDim2.new(0, 0, 0, 5)
+title.BackgroundTransparency = 1
+title.Text = "🔪 ФЛИНГ ДЛЯ DIRSTBRO"
+title.TextColor3 = Color3.fromRGB(0, 255, 200)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+title.Parent = mainFrame
+
+local input = Instance.new("TextBox")
+input.Size = UDim2.new(0.9, 0, 0, 30)
+input.Position = UDim2.new(0.05, 0, 0.35, 0)
+input.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+input.TextColor3 = Color3.fromRGB(255, 255, 255)
+input.PlaceholderText = "Ники через запятую: Игрок1, Игрок2"
+input.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+input.TextScaled = true
+input.Font = Enum.Font.Gotham
+input.BorderSizePixel = 0
+input.ClearTextOnFocus = false
+input.Parent = mainFrame
+
+local flingBtn = Instance.new("TextButton")
+flingBtn.Size = UDim2.new(0.4, 0, 0, 30)
+flingBtn.Position = UDim2.new(0.3, 0, 0.7, 0)
+flingBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+flingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+flingBtn.Text = "💥 ФЛИНГ"
+flingBtn.TextScaled = true
+flingBtn.Font = Enum.Font.GothamBold
+flingBtn.BorderSizePixel = 0
+flingBtn.Parent = mainFrame
+Instance.new("UICorner", flingBtn).CornerRadius = UDim.new(0, 6)
+
+local status = Instance.new("TextLabel")
+status.Size = UDim2.new(1, 0, 0, 20)
+status.Position = UDim2.new(0, 0, 0.85, 0)
+status.BackgroundTransparency = 1
+status.Text = "Введи ники через запятую"
+status.TextColor3 = Color3.fromRGB(200, 200, 200)
+status.TextScaled = true
+status.Font = Enum.Font.Gotham
+status.Parent = mainFrame
+
+-- =============================================
+-- ФУНКЦИЯ ФЛИНГА
+-- =============================================
+local function flingByNames(inputText)
+    if not inputText or inputText == "" then
+        status.Text = "❌ Введи ники!"
+        status.TextColor3 = Color3.fromRGB(255, 100, 100)
+        return
+    end
+    
+    local names = parseNames(inputText)
+    if #names == 0 then
+        status.Text = "❌ Ники не найдены"
+        status.TextColor3 = Color3.fromRGB(255, 100, 100)
+        return
+    end
+    
+    local foundPlayers = {}
+    local notFound = {}
+    
+    for _, name in ipairs(names) do
+        local target = Players:FindFirstChild(name)
+        if target and target ~= p then
+            table.insert(foundPlayers, target)
+        else
+            table.insert(notFound, name)
+        end
+    end
+    
+    if #foundPlayers == 0 then
+        status.Text = "❌ Никто не найден: " .. table.concat(notFound, ", ")
+        status.TextColor3 = Color3.fromRGB(255, 100, 100)
+        return
+    end
+    
+    local statusText = "💥 Флингую: "
+    for _, plr in ipairs(foundPlayers) do
+        statusText = statusText .. plr.Name .. ", "
+        pcall(function()
+            kawasakiFling(plr)
+        end)
+        task.wait(0.2)
+    end
+    statusText = statusText:sub(1, -3) .. " ✅"
+    status.Text = statusText
+    status.TextColor3 = Color3.fromRGB(0, 255, 100)
+    
+    if #notFound > 0 then
+        status.Text = status.Text .. " (не найдены: " .. table.concat(notFound, ", ") .. ")"
+    end
+end
+
+-- =============================================
+-- ОБРАБОТЧИКИ
+-- =============================================
+flingBtn.MouseButton1Click:Connect(function()
+    flingByNames(input.Text)
+end)
+
+input.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        flingByNames(input.Text)
+    end
+end)
+
+print("🔪 Fling GUI загружен!")
